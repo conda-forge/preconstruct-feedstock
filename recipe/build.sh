@@ -5,14 +5,22 @@ set -o xtrace -o nounset -o pipefail -o errexit
 # Create package archive and install globally
 npm pack --ignore-scripts
 npm install -ddd \
+    --no-bin-links \
     --global \
     --build-from-source \
-    ${SRC_DIR}/${PKG_NAME}-cli-${PKG_VERSION}.tgz
+    ${SRC_DIR}/preconstruct-cli-${PKG_VERSION}.tgz
 
 # Create license report for dependencies
 pnpm install
 pnpm-licenses generate-disclaimer --prod --output-file=third-party-licenses.txt
 
-tee ${PREFIX}/bin/${PKG_NAME}.cmd << EOF
-call %CONDA_PREFIX%\bin\node %PREFIX%\bin\preconstruct %*
+mkdir -p ${PREFIX}/bin
+tee ${PREFIX}/bin/preconstruct << EOF
+#!/bin/sh
+exec \${CONDA_PREFIX}/lib/node_modules/@preconstruct/cli/bin.js "\$@"
+EOF
+chmod +x ${PREFIX}/bin/preconstruct
+
+tee ${PREFIX}/bin/preconstruct.cmd << EOF
+call %CONDA_PREFIX%\bin\node %CONDA_PREFIX%\lib\node_modules\@preconstruct\cli\bin.js %*
 EOF
